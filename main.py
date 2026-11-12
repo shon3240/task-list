@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel, Field, StrictInt
 
 app = FastAPI()
 
@@ -6,9 +8,16 @@ app = FastAPI()
 tasks = []
 counter = 1
 
+class task_create(BaseModel):
+    title: str
+    owner: str
+    priority: StrictInt = Field(default=2, ge=1, le=3)
+
 @app.get("/tasks")
-def get_tasks():
-    return tasks
+def get_tasks(priority: Optional[int] = Query(default=None, ge=1, le=3)):
+    if priority is None:
+        return tasks
+    return [task for task in tasks if task["priority"] == priority]
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
@@ -18,12 +27,13 @@ def get_task(task_id: int):
     raise HTTPException(status_code=404, detail="Task not found")
 
 @app.post("/tasks")
-def add_task(task: dict):
+def add_task(task: task_create):
     global counter
     new_task = {
         "id": counter,
-        "title": task.get("title"),
-        "owner": task.get("owner")
+        "title": task.title,
+        "owner": task.owner,
+        "priority": task.priority
     }
     tasks.append(new_task)
     counter += 1
